@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>bouncing heart</title>
+  </head>
+
+  <body>
+    <h1 id="author">Made By LSR</h1>
+	<h1 id="show"></h1>
+    <canvas></canvas>
+	
+<script type="text/javascript">
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+
+const width = canvas.width = window.innerWidth;
+const height = canvas.height = window.innerHeight;
+
+const vi = 5;
+const num = 15;
+
+let hover;
+let mouse;
+
+function setup() {
+  hover = false;
+  mouse = { x: 0, y: 0 };
+  loop();
+}
+
+
+function random(min,max) {
+  return Math.floor(Math.random()*(max-min)) + min;
+}
+
+
+function randomColor() {
+  return 'rgb(' +
+         random(0, 255) + ', ' +
+         random(0, 255) + ', ' +
+         random(0, 255) + ')';
+}
+
+
+function Ball(x, y, velX, velY, color, size) {
+  this.x = x;
+  this.y = y;
+  this.velX = velX;
+  this.velY = velY;
+  this.oX = velX;
+  this.oY = velY;
+  this.color = color;
+  this.size = size;
+}
+
+function mousehandler(e) {
+  hover = e.type === 'mousemove';
+  if (hover) {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  }
+}
+
+
+Ball.prototype.draw = function() {
+	drawHeart(this);
+}
+
+function drawHeart(heart, c) {
+	ctx.beginPath();
+	ctx.fillStyle = c ? c : heart.color;
+	ctx.arc(heart.x - heart.size / 2, heart.y, heart.size / 2, Math.PI, 2 * Math.PI);
+	ctx.arc(heart.x + heart.size / 2, heart.y, heart.size / 2, Math.PI, 2 * Math.PI);
+	//ctx.arc(heart.x, heart.y, heart.size, 0, Math.PI);
+	drawTriangle(heart.x - heart.size, heart.y, heart.x, heart.y + heart.size, heart.x + heart.size, heart.y, Math.sqrt(heart.size * 0.5));
+	ctx.shadowColor="white";
+	ctx.shadowBlur=5;
+	ctx.fill();
+}
+
+
+function drawTriangle(x1, y1, x2, y2, x3, y3, radius) {
+	ctx.moveTo(x1, y1);
+	ctx.lineTo(x2 - radius, y2 + radius);
+	ctx.quadraticCurveTo(x2, y2 + 2 * radius, x2 + radius, y2 + radius);
+	ctx.lineTo(x3, y3);
+}
+
+
+Ball.prototype.update = function() {
+  if ((this.x + this.size) >= width) {
+    this.velX = -(this.velX);
+  }
+
+  if ((this.x - this.size) <= 0) {
+    this.velX = -(this.velX);
+  }
+
+  if ((this.y + this.size) >= height) {
+    this.velY = -(this.velY);
+  }
+
+  if ((this.y - this.size) <= 0) {
+    this.velY = -(this.velY);
+  }
+
+  this.x += this.velX;
+  this.y += this.velY;
+}
+
+
+Ball.prototype.collisionDetect = function() {
+  for (var j = 0; j < balls.length; j++) {
+    if (!(this === balls[j])) {
+      var dx = this.x - balls[j].x;
+      var dy = this.y - balls[j].y;
+      var distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= this.size + balls[j].size) {
+        balls[j].color = this.color = randomColor();
+		
+		balls[j].velX = - balls[j].velX;
+		balls[j].velY = - balls[j].velY;
+		
+		this.velX = - this.velX;
+		this.velY = - this.velY;
+      }
+    }
+  }
+}
+
+Ball.prototype.stop = function () {
+	this.oX = this.velX !== 0 ? this.velX : this.oX;
+	this.oY = this.velY !== 0 ? this.velY : this.oY;
+	drawHeart(this);
+	if (ctx.isPointInPath(mouse.x, mouse.y)) {
+		this.velX = 0;
+		this.velY = 0;
+	} else {
+		this.velX = this.oX;
+		this.velY = this.oY;
+	}
+}
+
+var balls = [];
+
+
+function getEventPosition(ev) {
+    var x, y;
+    if (ev.layerX || ev.layerX == 0) {
+        x = ev.layerX;
+        y = ev.layerY;
+    } else if (ev.offsetX || ev.offsetX == 0) { // Opera
+        x = ev.offsetX;
+        y = ev.offsetY;
+    }
+    return {
+        x: x,
+        y: y
+    };
+}
+
+canvas.addEventListener('click', function(e) {
+	var p = getEventPosition(e)
+	var x = p.x - canvas.getBoundingClientRect().left;
+	var y = p.y - canvas.getBoundingClientRect().top;
+	for (var i = 0; i < balls.length; i++) {
+		drawHeart(balls[i]);
+		if (ctx.isPointInPath(x, y)) {
+			balls[i].color = 'red';
+		}
+	}
+})
+
+
+function loop() {
+  ctx.shadowBlur=0;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.fillRect(0, 0, width, height);
+
+  while (balls.length < num) {
+    var ball = new Ball(
+      random(0,width),
+      random(0,height),
+      random(-vi,vi),
+      random(-vi,vi),
+	  //0,0,
+      randomColor(),
+      random(10,25)
+    );
+    balls.push(ball);
+  }
+
+  for (var i = 0; i < balls.length; i++) {
+    balls[i].draw();
+    balls[i].update();
+	balls[i].collisionDetect();
+	balls[i].stop();
+  }
+  
+  redHeartDetector();
+
+  requestAnimationFrame(loop);
+}
+
+function redHeartDetector() {
+	let allRedHeart = true;
+	for (var i = 0; i < balls.length; i++) {
+		if (balls[i].color !== 'red') {
+			allRedHeart = false;
+		}
+	}
+	if (allRedHeart) {
+		for (var i = 0; i < balls.length; i++) {
+			balls[i].oX = balls[i].velX !== 0 ? balls[i].velX : balls[i].oX;
+			balls[i].oY = balls[i].velY !== 0 ? balls[i].velY : balls[i].oY;
+			balls[i].velX = 0;
+			balls[i].velY = 0;
+		}
+		showHer();
+	}
+}
+
+let once = true;
+function showHer() {
+	if (once) {
+		var show = document.getElementById('show');
+		show.style.display = "inline-block";
+		show.innerHTML = "I Love You";
+		once = false;
+	}
+}
+
+function reload() {
+	window.location.reload();
+}
+
+window.addEventListener("load", setup);
+window.addEventListener("mousemove", mousehandler);
+</script>
+
+<style type="text/css">
+html, body {
+  margin: 0;
+}
+
+html {
+  font-family: sans-serif;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  height: inherit;
+}
+
+#author {
+  font-size: 2rem;
+  letter-spacing: -1px;
+  position: absolute;
+  margin: 0;
+  top: -4px;
+  right: 5px;
+
+  color: transparent;
+  text-shadow: 0 0 4px white;
+}
+#show {
+    display: none;
+    padding: 0.3em;
+    font-family: 'Megrim', cursive;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, .68);
+    border: 0.075em solid rgba(255, 255, 255, .1);
+}
+</style>
+  </body>
+</html>
